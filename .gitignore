@@ -3,7 +3,8 @@
 # dependencies
 /node_modules
 /.pnp
-.pnp.*
+.pnp.js
+.pnp.* # Added this to catch any other pnp related files
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
@@ -13,29 +14,36 @@
 # testing
 /coverage
 
-# next.js
+# next.js specific
 /.next/
 /out/
+# For next export
+/dist
 
-# production
+# production build (if you use a separate build step)
 /build
 
-# misc
-.DS_Store
-*.pem
-
-# debug
+# logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+.pnpm-debug.log* # Added this from your local content
 
-# env files (can opt-in for committing if needed)
-.env*
+# environment files (important: keep .env, .env.local, etc. out of version control)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# vercel
+# misc common files
+.DS_Store # macOS specific
+*.pem     # potential security sensitive files
+
+# vercel deployment specific
 .vercel
 
-# typescript
+# typescript build info
 *.tsbuildinfo
+# This is usually generated, so it's good to ignore
 next-env.d.ts

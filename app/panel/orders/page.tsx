@@ -14,7 +14,11 @@ interface Order {
   status: string;
   createdAt: string;
   updatedAt: string;
-  zincPayload: any;
+  zincPayload: {
+    price_components?: {
+      total: number;
+    };
+  } | null;
 }
 
 export default function OrdersPage() {
@@ -37,8 +41,9 @@ export default function OrdersPage() {
       }
 
       setOrders(data);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +99,7 @@ export default function OrdersPage() {
         <CardHeader>
           <CardTitle>No Orders</CardTitle>
           <CardDescription>
-            You haven't placed any orders yet.
+            You haven&apos;t placed any orders yet.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -132,7 +137,7 @@ export default function OrdersPage() {
                     Created: {formatDate(order.createdAt)}
                   </CardDescription>
                 </div>
-                <Badge variant={getStatusBadgeVariant(order.status) as any}>
+                <Badge variant={getStatusBadgeVariant(order.status) as 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | undefined}>
                   {order.status}
                 </Badge>
               </div>

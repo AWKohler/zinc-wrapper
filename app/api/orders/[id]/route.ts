@@ -4,10 +4,10 @@ import { eq, desc } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const requestId = params.id;
+    const { id: requestId } = await params;
     
     // Find order by request_id
     const [order] = await db.select()
@@ -32,7 +32,7 @@ export async function GET(
       order,
       events,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching order:', error);
     return NextResponse.json(
       { error: 'Failed to fetch order' },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getZincClient } from '@/lib/zinc/client';
+import { getZincClient, ZincAPIError } from '@/lib/zinc/client';
 import { db, orders } from '@/lib/db';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
@@ -96,10 +96,10 @@ export async function POST(request: NextRequest) {
       request_id: zincResponse.request_id,
       order_id: newOrder.id,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating order:', error);
     
-    if (error.name === 'ZincAPIError') {
+    if (error instanceof ZincAPIError) {
       return NextResponse.json(
         { 
           error: error.message,

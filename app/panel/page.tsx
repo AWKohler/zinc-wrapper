@@ -32,14 +32,19 @@ export default function AddProductPage() {
       }
 
       setProductDetails(data);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAddToCheckout = (product: any) => {
+  const handleAddToCheckout = (product: {
+    product_id: string;
+    title: string;
+    main_image: string;
+  }) => {
     // Store product in session storage and navigate to checkout
     sessionStorage.setItem('checkoutProduct', JSON.stringify(product));
     router.push('/panel/checkout');

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,11 @@ import { Loader2 } from 'lucide-react';
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<{
+    product_id: string;
+    title: string;
+    main_image: string;
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   
@@ -47,13 +51,13 @@ export default function CheckoutPage() {
     }
   }, [router]);
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | number | boolean) => {
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       setFormData(prev => ({
         ...prev,
         [parent]: {
-          ...(prev as any)[parent],
+          ...prev[parent as keyof typeof prev] as Record<string, string | number | boolean>,
           [child]: value,
         },
       }));
@@ -64,6 +68,8 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!product) return;
+    
     setIsSubmitting(true);
     setError('');
 
@@ -95,8 +101,9 @@ export default function CheckoutPage() {
       // Clear product from session and redirect to order details
       sessionStorage.removeItem('checkoutProduct');
       router.push(`/panel/orders/${data.request_id}`);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -115,6 +122,7 @@ export default function CheckoutPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={product.main_image}
               alt={product.title}

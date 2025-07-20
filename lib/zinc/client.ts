@@ -1,7 +1,7 @@
 interface ZincRequestOptions {
   path: string;
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  body?: any;
+  body?: unknown;
   timeout?: number;
 }
 
@@ -10,7 +10,7 @@ export class ZincAPIError extends Error {
     message: string,
     public code?: string,
     public status?: number,
-    public data?: any
+    public data?: unknown
   ) {
     super(message);
     this.name = 'ZincAPIError';
@@ -63,14 +63,15 @@ export class ZincClient {
       }
 
       return data as T;
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new ZincAPIError('Request timeout', 'timeout');
       }
       if (error instanceof ZincAPIError) {
         throw error;
       }
-      throw new ZincAPIError(error.message || 'Unknown error occurred');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      throw new ZincAPIError(errorMessage);
     } finally {
       clearTimeout(timeoutId);
     }

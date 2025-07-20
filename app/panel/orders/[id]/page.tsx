@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,39 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, ArrowLeft } from 'lucide-react';
 
+interface OrderEvent {
+  id: number;
+  eventType: string;
+  receivedAt: string;
+  rawBody: {
+    message?: string;
+  };
+}
+
 interface OrderDetails {
-  order: any;
-  events: any[];
+  order: {
+    id: number;
+    requestId: string;
+    asinList: string[] | null;
+    status: string;
+    createdAt: string;
+    zincPayload: {
+      price_components?: {
+        subtotal: number;
+        shipping: number;
+        tax: number;
+        total: number;
+      };
+      tracking?: Array<{
+        product_id: string;
+        carrier: string;
+        tracking_number: string;
+        obtained_at: string;
+      }>;
+      merchant_order_ids?: Array<{ merchant_order_id: string }>;
+    } | null;
+  };
+  events: OrderEvent[];
 }
 
 export default function OrderDetailPage() {
@@ -20,22 +50,7 @@ export default function OrderDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (params.id) {
-      fetchOrderDetails();
-      // Poll for updates while order is processing
-      const interval = setInterval(() => {
-        if (orderDetails?.order?.status === 'processing' || 
-            orderDetails?.order?.status === 'attempting_to_cancel') {
-          fetchOrderDetails();
-        }
-      }, 60000); // Every 60 seconds
-
-      return () => clearInterval(interval);
-    }
-  }, [params.id]);
-
-  const fetchOrderDetails = async () => {
+  const fetchOrderDetails = useCallback(async () => {
     try {
       const response = await fetch(`/api/orders/${params.id}`);
       const data = await response.json();
@@ -45,12 +60,31 @@ export default function OrderDetailPage() {
       }
 
       setOrderDetails(data);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    if (params.id) {
+      fetchOrderDetails();
+    }
+  }, [params.id, fetchOrderDetails]);
+  
+  useEffect(() => {
+    // Poll for updates while order is processing
+    if (orderDetails?.order?.status === 'processing' || 
+        orderDetails?.order?.status === 'attempting_to_cancel') {
+      const interval = setInterval(() => {
+        fetchOrderDetails();
+      }, 60000); // Every 60 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [orderDetails?.order?.status, fetchOrderDetails]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -193,7 +227,7 @@ export default function OrderDetailPage() {
             <CardContent>
               {payload.tracking && payload.tracking.length > 0 ? (
                 <div className="space-y-4">
-                  {payload.tracking.map((track: any, index: number) => (
+                  {payload.tracking.map((track, index) => (
                     <div key={index} className="border p-4 rounded">
                       <p><strong>Product:</strong> {track.product_id}</p>
                       <p><strong>Carrier:</strong> {track.carrier}</p>

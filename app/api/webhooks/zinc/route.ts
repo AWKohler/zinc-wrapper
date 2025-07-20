@@ -2,7 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, orders, zincEvents } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 
-function deriveOrderStatus(webhook: any): string {
+interface WebhookPayload {
+  _type?: string;
+  code?: string;
+  attempting_to_cancel?: boolean;
+  tracking?: Array<{
+    status?: string;
+    delivered?: boolean;
+  }>;
+  case?: unknown;
+  case_id?: string;
+  request_id?: string;
+  request?: {
+    request_id?: string;
+  };
+}
+
+function deriveOrderStatus(webhook: WebhookPayload): string {
   const type = webhook._type;
   const code = webhook.code;
 
@@ -23,7 +39,7 @@ function deriveOrderStatus(webhook: any): string {
     
     // Check if delivered (all tracking shows delivered)
     if (webhook.tracking && webhook.tracking.length > 0) {
-      const allDelivered = webhook.tracking.every((t: any) => 
+      const allDelivered = webhook.tracking.every((t) => 
         t.status === 'delivered' || t.delivered === true
       );
       if (allDelivered) {
@@ -38,7 +54,7 @@ function deriveOrderStatus(webhook: any): string {
   return 'processing';
 }
 
-function determineEventType(path: string, webhook: any): string {
+function determineEventType(path: string, webhook: WebhookPayload): string {
   // Try to determine from the webhook URL or content
   if (webhook._type === 'error') {
     return 'request_failed';
@@ -89,7 +105,7 @@ export async function POST(request: NextRequest) {
     // Insert the webhook event
     await db.insert(zincEvents).values({
       orderId: order.id,
-      eventType: eventType as any,
+      eventType: eventType as 'request_succeeded' | 'request_failed' | 'tracking_updated' | 'status_updated' | 'case_updated',
       rawBody: body,
     });
 
@@ -98,7 +114,7 @@ export async function POST(request: NextRequest) {
     
     await db.update(orders)
       .set({
-        status: newStatus as any,
+        status: newStatus as 'processing' | 'placed' | 'delivered' | 'failed' | 'aborted' | 'attempting_to_cancel' | 'cancelled',
         zincPayload: body,
         updatedAt: new Date(),
       })

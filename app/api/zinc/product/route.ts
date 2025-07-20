@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getZincClient } from '@/lib/zinc/client';
+import { getZincClient, ZincAPIError } from '@/lib/zinc/client';
 import { z } from 'zod';
 
 const productQuerySchema = z.object({
@@ -22,16 +22,16 @@ export async function GET(request: NextRequest) {
     const client = getZincClient();
 
     // Fetch product details
-    const productDetails = await client.request<any>({
+    const productDetails = await client.request({
       path: `/products/${asin}?retailer=amazon`,
       method: 'GET',
     });
 
     return NextResponse.json(productDetails);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching product data:', error);
     
-    if (error.name === 'ZincAPIError') {
+    if (error instanceof ZincAPIError) {
       return NextResponse.json(
         { 
           error: error.message,

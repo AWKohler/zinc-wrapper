@@ -37,6 +37,7 @@ export function ProductCard({ productDetails, onAddToCheckout }: ProductCardProp
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="aspect-square w-full overflow-hidden rounded-md">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={productDetails.main_image}
             alt={productDetails.title}

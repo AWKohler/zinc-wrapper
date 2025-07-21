@@ -16,6 +16,13 @@ interface WebhookPayload {
   request?: {
     request_id?: string;
   };
+  // Case update structure
+  messages?: Array<{
+    addax_zinc_order_id?: string;
+    type?: string;
+    message?: string;
+  }>;
+  state?: string;
 }
 
 function deriveOrderStatus(webhook: WebhookPayload): string {
@@ -67,8 +74,13 @@ function determineEventType(path: string, webhook: WebhookPayload): string {
     return 'request_succeeded';
   }
 
-  // Check for case updates
-  if (webhook.case || webhook.case_id) {
+  // Check for case updates - these have messages array
+  if (webhook.messages && webhook.messages.length > 0) {
+    return 'case_updated';
+  }
+
+  // Check for other case indicators
+  if (webhook.case || webhook.case_id || webhook.state) {
     return 'case_updated';
   }
 
@@ -80,11 +92,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     // Extract request_id from the webhook payload
-    const requestId = body.request_id || body.request?.request_id;
+    // For case updates, the order ID is in messages[0].addax_zinc_order_id
+    let requestId = body.request_id || body.request?.request_id;
+    
+    // Check if this is a case update with messages
+    if (!requestId && body.messages && body.messages.length > 0 && body.messages[0].addax_zinc_order_id) {
+      requestId = body.messages[0].addax_zinc_order_id;
+    }
     
     if (!requestId) {
       console.error('Webhook missing request_id:', body);
-      return NextResponse.json({ error: 'Missing request_id' }, { status: 400 });
+      // Still return 200 to prevent Zinc from retrying
+      return NextResponse.json({ received: true });
     }
 
     // Find the order by request_id

@@ -29,6 +29,28 @@ function deriveOrderStatus(webhook: WebhookPayload): string {
   const type = webhook._type;
   const code = webhook.code;
 
+  // Handle case updates
+  if (webhook.messages && webhook.messages.length > 0) {
+    // Check for cancellation/refund messages
+    const hasCancel = webhook.messages.some(msg => 
+      msg.type?.includes('cancel') || 
+      msg.message?.toLowerCase().includes('cancel')
+    );
+    const hasRefund = webhook.messages.some(msg => 
+      msg.type?.includes('refund') || 
+      msg.message?.toLowerCase().includes('refund')
+    );
+    
+    if (hasCancel || hasRefund) {
+      return 'cancelled';
+    }
+    
+    // Check case state
+    if (webhook.state?.includes('closed')) {
+      return 'cancelled';
+    }
+  }
+
   // Handle error responses
   if (type === 'error') {
     if (code === 'aborted_request') {
@@ -131,12 +153,31 @@ export async function POST(request: NextRequest) {
     // Update order status and payload
     const newStatus = deriveOrderStatus(body);
     
+    // For case updates, merge the webhook data instead of replacing
+    const updatePayload: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+    
+    // Only update status if it's a meaningful change
+    if (eventType === 'case_updated') {
+      // For case updates, only change status if it's a cancellation/refund
+      if (newStatus === 'cancelled') {
+        updatePayload.status = newStatus;
+      }
+      // Merge case data into existing payload
+      updatePayload.zincPayload = {
+        ...(order.zincPayload || {}),
+        case_update: body,
+        last_case_state: body.state,
+      };
+    } else {
+      // For other webhooks, replace the entire payload and status
+      updatePayload.status = newStatus as 'processing' | 'placed' | 'delivered' | 'failed' | 'aborted' | 'attempting_to_cancel' | 'cancelled';
+      updatePayload.zincPayload = body;
+    }
+    
     await db.update(orders)
-      .set({
-        status: newStatus as 'processing' | 'placed' | 'delivered' | 'failed' | 'aborted' | 'attempting_to_cancel' | 'cancelled',
-        zincPayload: body,
-        updatedAt: new Date(),
-      })
+      .set(updatePayload)
       .where(eq(orders.id, order.id));
 
     // Return success quickly (within 2 seconds as per requirements)

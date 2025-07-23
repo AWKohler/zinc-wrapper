@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, ArrowLeft } from 'lucide-react';
+import { OrderActionDialogs } from '@/components/order-action-dialogs';
 
 interface OrderEvent {
   id: number;
@@ -263,21 +264,7 @@ export default function OrderDetailPage() {
           <CardTitle>Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 flex-wrap">
-            {order.status === 'processing' && (
-              <Button variant="destructive">Abort Order</Button>
-            )}
-            {order.status === 'failed' && (
-              <Button>Retry Order</Button>
-            )}
-            {payload.merchant_order_ids && payload.merchant_order_ids.length > 0 && (
-              <>
-                <Button variant="outline">Cancel Order</Button>
-                <Button variant="outline">Request Return</Button>
-                <Button variant="outline">Open Case</Button>
-              </>
-            )}
-          </div>
+          <OrderActionDialogs order={order} onActionComplete={fetchOrderDetails} />
         </CardContent>
       </Card>
     </div>
